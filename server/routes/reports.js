@@ -1,4 +1,4 @@
-// server/routes/reports.js
+// /server/routes/reports.js
 const express = require('express');
 const router = express.Router();
 const HazardReport = require('../models/HazardReport'); // Import our model
@@ -25,8 +25,7 @@ router.post('/', async (req, res) => {
       description,
       mediaUrl,
       hazardType,
-      submittedBy,
-      // Other fields will have default values (e.g., status: 'pending')
+      submittedBy, // Save the user's email
     });
 
     // Save the report to the database
@@ -35,6 +34,25 @@ router.post('/', async (req, res) => {
     // Send a success response back to the app with the saved data
     res.status(201).json(savedReport);
 
+  } catch (err) {
+    console.error('Validation Error:', err.message);
+    // Provide a more specific error for enum validation
+    if (err.name === 'ValidationError') {
+        return res.status(400).json({ msg: err.message });
+    }
+    res.status(500).send('Server Error');
+  }
+});
+
+
+// @route   GET /api/reports
+// @desc    Get all hazard reports
+// @access  Private (we'll secure this later)
+router.get('/', async (req, res) => {
+  try {
+    // Find all reports and sort them by the newest first
+    const reports = await HazardReport.find().sort({ createdAt: -1 });
+    res.json(reports);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
