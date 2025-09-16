@@ -3,7 +3,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
-import ProtectedRoute from './components/ProtectedRoute'; // Import the protected route
+import SocialFeedPage from './pages/SocialFeedPage'; // <-- Import the new page
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
@@ -11,12 +12,22 @@ function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         
-        {/* Wrap the DashboardPage with ProtectedRoute */}
+        {/* Main Hazard Reports Dashboard */}
         <Route
           path="/"
           element={
             <ProtectedRoute>
               <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Social Media Feed Page */}
+        <Route
+          path="/social"
+          element={
+            <ProtectedRoute>
+              <SocialFeedPage />
             </ProtectedRoute>
           }
         />

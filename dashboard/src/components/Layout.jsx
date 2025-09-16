@@ -1,40 +1,67 @@
 // /dashboard/src/components/Layout.jsx
 import React from 'react';
-import { Box, AppBar, Toolbar, Typography, Button } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { Box, AppBar, Toolbar, Typography, Button, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText } from '@mui/material';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
+import MapIcon from '@mui/icons-material/Map'; // Icons for the sidebar
+import RssFeedIcon from '@mui/icons-material/RssFeed';
+
+const drawerWidth = 240;
 
 const Layout = ({ children }) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      navigate('/login'); // Redirect to login after logout
-    } catch (error) {
-      console.error('Failed to log out', error);
-    }
+    await signOut(auth);
+    navigate('/login');
   };
+
+  const menuItems = [
+    { text: 'Hazard Reports', path: '/', icon: <MapIcon /> },
+    { text: 'Social Media Feed', path: '/social', icon: <RssFeedIcon /> },
+  ];
 
   return (
     <Box sx={{ display: 'flex' }}>
-      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+      <AppBar position="fixed" sx={{ width: `calc(100% - ${drawerWidth}px)`, ml: `${drawerWidth}px` }}>
         <Toolbar>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             INCOIS Hazard Dashboard
           </Typography>
-          <Button color="inherit" onClick={handleLogout}>
-            Logout
-          </Button>
+          <Button color="inherit" onClick={handleLogout}>Logout</Button>
         </Toolbar>
       </AppBar>
-      <Box
-        component="main"
-        sx={{ flexGrow: 1, p: 3, width: '100%' }}
+      <Drawer
+        sx={{
+          width: drawerWidth,
+          flexShrink: 0,
+          '& .MuiDrawer-paper': { width: drawerWidth, boxSizing: 'border-box' },
+        }}
+        variant="permanent"
+        anchor="left"
       >
-        <Toolbar /> {/* This is a spacer to push content below the AppBar */}
-        {children} {/* This is where the page content will be rendered */}
+        <Toolbar /> {/* Spacer for AppBar */}
+        <Box sx={{ overflow: 'auto' }}>
+          <List>
+            {menuItems.map((item) => (
+              <ListItem key={item.text} disablePadding>
+                <ListItemButton
+                  selected={location.pathname === item.path}
+                  onClick={() => navigate(item.path)}
+                >
+                  <ListItemIcon>{item.icon}</ListItemIcon>
+                  <ListItemText primary={item.text} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      </Drawer>
+      <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+        <Toolbar /> {/* Spacer for AppBar */}
+        {children}
       </Box>
     </Box>
   );
