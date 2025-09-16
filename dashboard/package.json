@@ -14,9 +14,11 @@
     "@emotion/styled": "^11.14.1",
     "@mui/material": "^7.3.2",
     "axios": "^1.12.2",
+    "leaflet": "^1.9.4",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-firebase-hooks": "^5.1.1",
+    "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.9.1"
   },
   "devDependencies": {
