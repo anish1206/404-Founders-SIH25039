@@ -1,6 +1,6 @@
 # Root .gitignore for SIH Project
 
-# Environment files
+# Environment files (but NOT .env.example files)
 .env
 .env.local
 .env.development.local
@@ -72,17 +72,32 @@ temp/
 .expo/
 expo-env.d.ts
 
-# Dashboard specific files (if any)
-dashboard/.env*
+# Dashboard specific files (but NOT .env.example)
+dashboard/.env
+dashboard/.env.local
+dashboard/.env.development.local
+dashboard/.env.test.local
+dashboard/.env.production.local
 dashboard/dist/
 dashboard/build/
 
-# Server specific files
-server/.env*
+# Server specific files (but NOT .env.example)
+server/.env
+server/.env.local
+server/.env.development.local
+server/.env.test.local
+server/.env.production.local
 server/uploads/
 
-# Mobile app specific files  
-mobile-app/.env*
+# Mobile app specific files (but NOT .env.example)
+mobile-app/.env
+mobile-app/.env.local
+mobile-app/.env.development.local
+mobile-app/.env.test.local
+mobile-app/.env.production.local
 mobile-app/.expo/
 mobile-app/dist/
 mobile-app/web-build/
+
+# Explicitly include .env.example files (override any ignore patterns)
+!**/.env.example
