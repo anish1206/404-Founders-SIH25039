@@ -62,8 +62,88 @@ router.get('/hotspots', async (req, res) => {
     }
 });
 
-// POST and PATCH routes remain the same
-router.post('/', async (req, res) => { /* ... existing code ... */ });
-router.patch('/:id/status', async (req, res) => { /* ... existing code ... */ });
+// POST route - Create a new hazard report
+router.post('/', async (req, res) => {
+    try {
+        console.log('Received POST request to /api/reports');
+        console.log('Request body:', req.body);
+
+        const { description, longitude, latitude, hazardType, mediaUrl, submittedBy } = req.body;
+
+        // Validate required fields
+        if (!description || !longitude || !latitude || !hazardType || !mediaUrl) {
+            return res.status(400).json({
+                error: 'Missing required fields: description, longitude, latitude, hazardType, and mediaUrl are required'
+            });
+        }
+
+        // Create new hazard report
+        const newReport = new HazardReport({
+            description,
+            location: {
+                type: 'Point',
+                coordinates: [longitude, latitude] // [longitude, latitude] for GeoJSON
+            },
+            hazardType,
+            mediaUrl: mediaUrl, // Mobile app sends mediaUrl directly
+            submittedBy: submittedBy || 'anonymous',
+            status: 'pending', // Default status
+            aiConfidenceScore: 0 // Default confidence
+        });
+
+        // Save to database
+        const savedReport = await newReport.save();
+        console.log('Report saved successfully:', savedReport._id);
+
+        res.status(201).json({
+            message: 'Hazard report submitted successfully',
+            reportId: savedReport._id,
+            report: savedReport
+        });
+
+    } catch (error) {
+        console.error('Error creating hazard report:', error);
+        res.status(500).json({
+            error: 'Internal server error',
+            details: error.message
+        });
+    }
+});
+
+// PATCH route - Update report status (for admin/analyst use)
+router.patch('/:id/status', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        if (!['pending', 'verified', 'rejected'].includes(status)) {
+            return res.status(400).json({
+                error: 'Invalid status. Must be: pending, verified, or rejected'
+            });
+        }
+
+        const updatedReport = await HazardReport.findByIdAndUpdate(
+            id,
+            { status },
+            { new: true }
+        );
+
+        if (!updatedReport) {
+            return res.status(404).json({ error: 'Report not found' });
+        }
+
+        res.json({
+            message: 'Report status updated successfully',
+            report: updatedReport
+        });
+
+    } catch (error) {
+        console.error('Error updating report status:', error);
+        res.status(500).json({
+            error: 'Internal server error',
+            details: error.message
+        });
+    }
+});
 
 module.exports = router;
