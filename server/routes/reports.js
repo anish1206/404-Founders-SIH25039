@@ -1,23 +1,20 @@
 // /server/routes/reports.js
+// This file defines all API routes related to hazard reports.
+// It handles creating reports, fetching them based on user role, updating status, calculating hotspots, and triggering the AI pipeline.
+
 const express = require('express');
 const router = express.Router();
 const HazardReport = require('../models/HazardReport');
 const { runAIVerification } = require('../services/aiVerification');
 
-// --- MODIFIED GET ROUTE FOR ROLE-BASED ACCESS ---
+// GET /api/reports - Fetch reports based on user role
 router.get('/', async (req, res) => {
   try {
-    // In a real app, you would have middleware to verify the Firebase token
-    // and attach user role. For now, we simulate it via a query param for testing.
-    // To test analyst view: GET /api/reports?role=analyst
-    const userRole = req.query.role; 
-
+    const userRole = req.query.role;
     let query = {};
     if (userRole === 'analyst') {
-      // Analysts only see verified reports
       query.status = 'verified';
     }
-    
     const reports = await HazardReport.find(query).sort({ createdAt: -1 });
     res.json(reports);
   } catch (err) {
@@ -26,27 +23,21 @@ router.get('/', async (req, res) => {
   }
 });
 
-// --- NEW ENDPOINT FOR HOTSPOTS ---
+// GET /api/reports/hotspots - Calculate and fetch hotspots
 router.get('/hotspots', async (req, res) => {
     try {
-        // Hotspots are calculated based on the density of VERIFIED reports.
         const hotspots = await HazardReport.aggregate([
-            // 1. Filter for only verified reports
             { $match: { status: 'verified' } },
-            // 2. Group by a rounded location to cluster nearby points
             {
                 $group: {
                     _id: {
-                        // Rounding coordinates to 2 decimal places creates grid cells of ~1km
                         lat: { $round: [{ $arrayElemAt: ["$location.coordinates", 1] }, 2] },
                         lon: { $round: [{ $arrayElemAt: ["$location.coordinates", 0] }, 2] },
                     },
-                    count: { $sum: 1 } // Count reports in each cell
+                    count: { $sum: 1 }
                 }
             },
-            // 3. Only show hotspots with more than 1 report
             { $match: { count: { $gt: 1 } } },
-            // 4. Format the output nicely
             { 
                 $project: {
                     _id: 0,
@@ -62,41 +53,38 @@ router.get('/hotspots', async (req, res) => {
     }
 });
 
-// POST route - Create a new hazard report
+// POST /api/reports - Create a new hazard report and trigger AI
 router.post('/', async (req, res) => {
     try {
-        console.log('Received POST request to /api/reports');
-        console.log('Request body:', req.body);
-
         const { description, longitude, latitude, hazardType, mediaUrl, submittedBy } = req.body;
 
-        // Validate required fields
         if (!description || !longitude || !latitude || !hazardType || !mediaUrl) {
             return res.status(400).json({
-                error: 'Missing required fields: description, longitude, latitude, hazardType, and mediaUrl are required'
+                error: 'Missing required fields'
             });
         }
 
-        // Create new hazard report
         const newReport = new HazardReport({
             description,
-            location: {
-                type: 'Point',
-                coordinates: [longitude, latitude] // [longitude, latitude] for GeoJSON
-            },
+            location: { type: 'Point', coordinates: [longitude, latitude] },
             hazardType,
-            mediaUrl: mediaUrl, // Mobile app sends mediaUrl directly
+            mediaUrl,
             submittedBy: submittedBy || 'anonymous',
-            status: 'pending', // Default status
-            aiConfidenceScore: 0 // Default confidence
+            status: 'pending',
+            aiConfidenceScore: 0
         });
 
-        // Save to database
         const savedReport = await newReport.save();
         console.log('Report saved successfully:', savedReport._id);
 
+        // Trigger the AI pipeline as a background task (fire-and-forget)
+        runAIVerification(savedReport).catch(err => {
+            console.error(`AI verification process failed for report ${savedReport._id}:`, err);
+        });
+
+        // Respond to the user immediately
         res.status(201).json({
-            message: 'Hazard report submitted successfully',
+            message: 'Hazard report submitted successfully and is being processed.',
             reportId: savedReport._id,
             report: savedReport
         });
@@ -110,7 +98,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-// PATCH route - Update report status (for admin/analyst use)
+// PATCH /api/reports/:id/status - Update a report's status
 router.patch('/:id/status', async (req, res) => {
     try {
         const { id } = req.params;
@@ -130,6 +118,11 @@ router.patch('/:id/status', async (req, res) => {
 
         if (!updatedReport) {
             return res.status(404).json({ error: 'Report not found' });
+        }
+        
+        // If an admin manually verifies a report, anchor it to the blockchain (future enhancement)
+        if (updatedReport.status === 'verified') {
+            console.log(`Report ${updatedReport._id} manually verified. Ready for blockchain anchoring.`);
         }
 
         res.json({

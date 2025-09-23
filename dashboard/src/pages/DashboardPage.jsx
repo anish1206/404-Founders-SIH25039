@@ -1,4 +1,7 @@
 // /dashboard/src/pages/DashboardPage.jsx
+// This is the complete code for the main dashboard page.
+// It handles role-based access control (Admin vs. Analyst) and displays reports, maps, and hotspots accordingly.
+
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import ReportsMap from '../components/ReportsMap';
@@ -12,25 +15,21 @@ import {
 } from '@mui/material';
 
 const DashboardPage = () => {
-  const [user, authLoading] = useAuthState(auth); // Get the current user and auth loading state
+  const [user, authLoading] = useAuthState(auth);
   const [reports, setReports] = useState([]);
   const [hotspots, setHotspots] = useState([]);
-  const [userRole, setUserRole] = useState(null); // Start with null role
+  const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [updatingId, setUpdatingId] = useState(null);
 
   useEffect(() => {
-    // This effect runs when the user object from Firebase is available
     const fetchUserRoleAndData = async () => {
-      if (!user) return; // Wait until user is loaded
-
+      if (!user) return;
       try {
         setLoading(true);
         const tokenResult = await user.getIdTokenResult();
-        
-        // If the user's role claim is specifically 'analyst', set it.
-        // Otherwise, they default to 'admin'.
+        // Logic: If role is explicitly 'analyst', use it. Otherwise, default to 'admin'.
         const role = tokenResult.claims.role === 'analyst' ? 'analyst' : 'admin';
         setUserRole(role);
 
@@ -51,18 +50,16 @@ const DashboardPage = () => {
         setLoading(false);
       }
     };
-
     if (!authLoading) {
         fetchUserRoleAndData();
     }
-  }, [user, authLoading]); // Re-run effect if user or auth loading state changes
+  }, [user, authLoading]);
 
   const handleUpdateStatus = async (reportId, newStatus) => {
     setUpdatingId(reportId);
     try {
       const apiEndpoint = `${import.meta.env.VITE_API_BASE_URL}/api/reports/${reportId}/status`;
       const response = await axios.patch(apiEndpoint, { status: newStatus });
-
       setReports(currentReports =>
         currentReports.map(report =>
           report._id === reportId ? response.data : report
@@ -75,12 +72,20 @@ const DashboardPage = () => {
       setUpdatingId(null);
     }
   };
-
+  
   const getStatusChip = (status) => {
     const color = status === 'pending' ? 'warning' : status === 'verified' ? 'success' : 'error';
     return <Chip label={status} color={color} size="small" />;
   };
 
+  const getScoreChip = (score) => {
+    let color = 'default';
+    if (score >= 75) color = 'success';
+    else if (score >= 40) color = 'warning';
+    else if (score > 0) color = 'error';
+    return <Chip label={`${score} / 100`} color={color} size="small" variant="outlined" />;
+  };
+  
   const renderAdminTable = () => (
     <TableContainer component={Paper}>
       <Table sx={{ minWidth: 650 }}>
@@ -88,6 +93,7 @@ const DashboardPage = () => {
           <TableRow>
             <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
             <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>AI Score</TableCell>
             <TableCell sx={{ fontWeight: 'bold' }}>Hazard Type</TableCell>
             <TableCell sx={{ fontWeight: 'bold' }}>Description</TableCell>
             <TableCell sx={{ fontWeight: 'bold' }}>Media</TableCell>
@@ -99,6 +105,7 @@ const DashboardPage = () => {
             <TableRow key={report._id}>
               <TableCell>{new Date(report.createdAt).toLocaleString()}</TableCell>
               <TableCell>{getStatusChip(report.status)}</TableCell>
+              <TableCell>{getScoreChip(report.aiConfidenceScore)}</TableCell>
               <TableCell>{report.hazardType}</TableCell>
               <TableCell>{report.description}</TableCell>
               <TableCell><Link href={report.mediaUrl} target="_blank" rel="noopener noreferrer">View Media</Link></TableCell>
@@ -119,28 +126,20 @@ const DashboardPage = () => {
 
   const renderAnalystTable = () => (
     <TableContainer component={Paper}>
-      <Table sx={{ minWidth: 650 }}>
-        <TableHead>
-          <TableRow>
-            <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
-            <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-            <TableCell sx={{ fontWeight: 'bold' }}>Hazard Type</TableCell>
-            <TableCell sx={{ fontWeight: 'bold' }}>Description</TableCell>
-            <TableCell sx={{ fontWeight: 'bold' }}>Media</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {reports.map((report) => (
-            <TableRow key={report._id}>
-              <TableCell>{new Date(report.createdAt).toLocaleString()}</TableCell>
-              <TableCell>{getStatusChip(report.status)}</TableCell>
-              <TableCell>{report.hazardType}</TableCell>
-              <TableCell>{report.description}</TableCell>
-              <TableCell><Link href={report.mediaUrl} target="_blank" rel="noopener noreferrer">View Media</Link></TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+        <Table sx={{ minWidth: 650 }}>
+            <TableHead><TableRow><TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell><TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell><TableCell sx={{ fontWeight: 'bold' }}>Hazard Type</TableCell><TableCell sx={{ fontWeight: 'bold' }}>Description</TableCell><TableCell sx={{ fontWeight: 'bold' }}>Media</TableCell></TableRow></TableHead>
+            <TableBody>
+                {reports.map((report) => (
+                    <TableRow key={report._id}>
+                        <TableCell>{new Date(report.createdAt).toLocaleString()}</TableCell>
+                        <TableCell>{getStatusChip(report.status)}</TableCell>
+                        <TableCell>{report.hazardType}</TableCell>
+                        <TableCell>{report.description}</TableCell>
+                        <TableCell><Link href={report.mediaUrl} target="_blank" rel="noopener noreferrer">View Media</Link></TableCell>
+                    </TableRow>
+                ))}
+            </TableBody>
+        </Table>
     </TableContainer>
   );
 
@@ -153,19 +152,15 @@ const DashboardPage = () => {
     return (
       <>
         <Typography variant="h5" component="h2" gutterBottom>Hazard Map</Typography>
-        <Paper sx={{ mb: 3 }}>
-          <ReportsMap reports={reports} hotspots={hotspots} />
-        </Paper>
-
+        <Paper sx={{ mb: 3 }}><ReportsMap reports={reports} hotspots={hotspots} /></Paper>
         {userRole === 'admin' && (
           <>
             <Typography variant="h5" component="h2" gutterBottom>Verification Queue</Typography>
             {renderAdminTable()}
           </>
         )}
-        
         {userRole === 'analyst' && (
-           <>
+          <>
             <Typography variant="h5" component="h2" gutterBottom>Verified Reports</Typography>
             {renderAnalystTable()}
           </>
