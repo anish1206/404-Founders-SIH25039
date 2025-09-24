@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Layout from '../components/Layout';
 import ReportsMap from '../components/ReportsMap';
+import ReportsTimeline from '../components/ReportsTimeline';
 import axios from 'axios';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../firebase';
@@ -23,7 +24,8 @@ import {
   OpenInNew as OpenIcon,
   FilterList as FilterIcon,
   Map as MapIcon,
-  Analytics as AnalyticsIcon
+  Analytics as AnalyticsIcon,
+  RestartAlt as ResetIcon
 } from '@mui/icons-material';
 
 const DashboardPage = () => {
@@ -132,6 +134,38 @@ const DashboardPage = () => {
     
     return { total, verified, rejected, pending };
   }, [reports]);
+
+  // Build timeline data (last 30 days) from filtered reports
+  const timelineData = useMemo(() => {
+    // For analyst focus on verified and pending; for admin use all filtered
+    const source = userRole === 'analyst'
+      ? filteredReports.filter(r => r.status !== 'rejected')
+      : filteredReports;
+
+    const days = 30;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const pad = (n) => String(n).padStart(2, '0');
+    const keyFor = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+    const buckets = new Map();
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      buckets.set(keyFor(d), 0);
+    }
+
+    source.forEach(r => {
+      const d = new Date(r.createdAt);
+      d.setHours(0, 0, 0, 0);
+      const key = keyFor(d);
+      if (buckets.has(key)) {
+        buckets.set(key, buckets.get(key) + 1);
+      }
+    });
+
+    return Array.from(buckets.entries()).map(([date, count]) => ({ date, count }));
+  }, [filteredReports, userRole]);
 
   // Get status icon and color
   const getStatusIcon = (status) => {
@@ -338,9 +372,25 @@ const DashboardPage = () => {
   // Filters component
   const FiltersSection = () => (
     <Paper sx={{ p: 3, mb: 3, bgcolor: '#fafbfc', border: '1px solid #e1e4e8' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <FilterIcon sx={{ mr: 1, color: '#6c757d' }} />
-        <Typography variant="h6" sx={{ fontWeight: 600 }}>Filters</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+          <FilterIcon sx={{ mr: 1, color: '#6c757d' }} />
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>Filters</Typography>
+        </Box>
+        <Button 
+          variant="outlined" 
+          size="small"
+          startIcon={<ResetIcon />}
+          onClick={() => {
+            setLocationFilter('');
+            setTypeFilter('');
+            setStatusFilter('');
+            setDateFilter('');
+          }}
+          disabled={!locationFilter && !typeFilter && !statusFilter && !dateFilter}
+        >
+          Clear All Filters
+        </Button>
       </Box>
       <Grid container spacing={2}>
         <Grid item xs={12} sm={6} md={3}>
@@ -351,16 +401,24 @@ const DashboardPage = () => {
             value={locationFilter}
             onChange={(e) => setLocationFilter(e.target.value)}
             variant="outlined"
-            sx={{ bgcolor: 'white' }}
+            placeholder="e.g., Mumbai, Andheri East"
+            sx={{ bgcolor: 'white', width: '100%' }}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <FormControl fullWidth size="small" sx={{ bgcolor: 'white' }}>
-            <InputLabel>Hazard Type</InputLabel>
+          <FormControl fullWidth size="small" sx={{ bgcolor: 'white', width: '100%' }}>
+            <InputLabel id="hazard-type-label" shrink>Hazard Type</InputLabel>
             <Select
+              id="hazard-type"
+              labelId="hazard-type-label"
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
               label="Hazard Type"
+              fullWidth
+              displayEmpty
+              renderValue={(val) => (val ? val : (
+                <em style={{ color: '#6c757d' }}>All Types</em>
+              ))}
             >
               <MenuItem value="">All Types</MenuItem>
               {hazardTypes.map(type => (
@@ -370,12 +428,21 @@ const DashboardPage = () => {
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <FormControl fullWidth size="small" sx={{ bgcolor: 'white' }}>
-            <InputLabel>Status</InputLabel>
+          <FormControl fullWidth size="small" sx={{ bgcolor: 'white', width: '100%' }}>
+            <InputLabel id="status-label" shrink>Status</InputLabel>
             <Select
+              id="status"
+              labelId="status-label"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               label="Status"
+              fullWidth
+              displayEmpty
+              renderValue={(val) => (val ? (
+                val.charAt(0).toUpperCase() + val.slice(1)
+              ) : (
+                <em style={{ color: '#6c757d' }}>All Status</em>
+              ))}
             >
               <MenuItem value="">All Status</MenuItem>
               <MenuItem value="pending">Pending</MenuItem>
@@ -393,26 +460,11 @@ const DashboardPage = () => {
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
             InputLabelProps={{ shrink: true }}
-            sx={{ bgcolor: 'white' }}
+            placeholder="yyyy-mm-dd"
+            sx={{ bgcolor: 'white', width: '100%' }}
           />
         </Grid>
       </Grid>
-      {(locationFilter || typeFilter || statusFilter || dateFilter) && (
-        <Box sx={{ mt: 2 }}>
-          <Button 
-            variant="outlined" 
-            size="small" 
-            onClick={() => {
-              setLocationFilter('');
-              setTypeFilter('');
-              setStatusFilter('');
-              setDateFilter('');
-            }}
-          >
-            Clear All Filters
-          </Button>
-        </Box>
-      )}
     </Paper>
   );
 
@@ -655,6 +707,24 @@ const DashboardPage = () => {
             <ReportsMap reports={filteredReports.filter(report => report.status !== 'rejected')} hotspots={hotspots} />
           </Box>
         </Paper>
+
+        {userRole === 'analyst' && (
+          <Paper sx={{ 
+            mb: 4,
+            p: 3,
+            borderRadius: 2,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+            border: '1px solid #e1e4e8'
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <AnalyticsIcon sx={{ mr: 2, color: '#0d6efd' }} />
+              <Typography variant="h5" sx={{ fontWeight: 600, color: '#2c3e50' }}>
+                Reports Timeline (Last 30 Days)
+              </Typography>
+            </Box>
+            <ReportsTimeline data={timelineData} />
+          </Paper>
+        )}
 
         {/* Filters Section */}
         <FiltersSection />
