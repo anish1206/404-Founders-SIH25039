@@ -5,6 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Layout from '../components/Layout';
 import ReportsMap from '../components/ReportsMap';
 import ReportsTimeline from '../components/ReportsTimeline';
+import ReportsPie from '../components/ReportsPie';
 import axios from 'axios';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../firebase';
@@ -165,6 +166,21 @@ const DashboardPage = () => {
     });
 
     return Array.from(buckets.entries()).map(([date, count]) => ({ date, count }));
+  }, [filteredReports, userRole]);
+
+  // Build pie data: counts by hazardType from filtered (analyst excludes rejected)
+  const pieData = useMemo(() => {
+    const source = userRole === 'analyst'
+      ? filteredReports.filter(r => r.status !== 'rejected')
+      : filteredReports;
+    const counts = new Map();
+    source.forEach(r => {
+      const key = r.hazardType || 'Unknown';
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    // Sort by count desc for better legend readability
+    const sorted = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+    return sorted.map(([label, value]) => ({ label, value }));
   }, [filteredReports, userRole]);
 
   // Get status icon and color
@@ -719,10 +735,17 @@ const DashboardPage = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
               <AnalyticsIcon sx={{ mr: 2, color: '#0d6efd' }} />
               <Typography variant="h5" sx={{ fontWeight: 600, color: '#2c3e50' }}>
-                Reports Timeline (Last 30 Days)
+                Trends & Breakdown
               </Typography>
             </Box>
-            <ReportsTimeline data={timelineData} />
+            <Grid container spacing={3}>
+              <Grid item xs={12} lg={8}>
+                <ReportsTimeline data={timelineData} />
+              </Grid>
+              <Grid item xs={12} lg={4}>
+                <ReportsPie data={pieData} donut height={260} />
+              </Grid>
+            </Grid>
           </Paper>
         )}
 
