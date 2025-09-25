@@ -56,23 +56,39 @@ const LoginPage = () => {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        backgroundImage: 'url("/WhatsApp%20Image%202025-09-25%20at%2011.44.49_a9886946.jpg")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        position: 'relative',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: 2,
+        backgroundColor: '#f0f2f5',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.3)',
+          zIndex: 1,
+        },
       }}
     >
-      <Container maxWidth="lg">
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 2 }}>
         <Card
           sx={{
             display: 'flex',
             borderRadius: 4,
             overflow: 'hidden',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
             maxWidth: 900,
             margin: '0 auto',
             bgcolor: 'white',
+            backdropFilter: 'blur(10px)',
           }}
         >
           {/* Left Panel - Branding */}

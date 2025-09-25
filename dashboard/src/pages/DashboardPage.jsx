@@ -486,186 +486,256 @@ const DashboardPage = () => {
 
   // Report cards for admin
   const renderAdminCards = () => (
-    <Grid container spacing={3}>
+    <Stack spacing={2}>
       {filteredReports.map((report) => (
-        <Grid item xs={12} md={6} lg={4} key={report._id}>
-          <Card sx={{ 
-            height: '100%',
+        <Card key={report._id} sx={{ 
+          height: '180px',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'row',
+          bgcolor: getStatusColor(report.status),
+          border: `1px solid ${report.status === 'verified' ? '#4caf50' : report.status === 'rejected' ? '#f44336' : '#ff9800'}20`,
+          transition: 'transform 0.2s, box-shadow 0.2s',
+          '&:hover': { 
+            transform: 'translateY(-2px)', 
+            boxShadow: '0 6px 20px rgba(0,0,0,0.12)' 
+          }
+        }}>
+          {/* Left section - Status and basic info */}
+          <Box sx={{ 
+            width: '300px',
+            p: 2,
             display: 'flex',
             flexDirection: 'column',
-            bgcolor: getStatusColor(report.status),
-            border: `1px solid ${report.status === 'verified' ? '#4caf50' : report.status === 'rejected' ? '#f44336' : '#ff9800'}20`,
-            transition: 'transform 0.2s, box-shadow 0.2s',
-            '&:hover': { 
-              transform: 'translateY(-4px)', 
-              boxShadow: '0 8px 25px rgba(0,0,0,0.15)' 
-            }
+            justifyContent: 'space-between'
           }}>
-            <CardHeader
-              avatar={getStatusIcon(report.status)}
-              action={
-                <Stack direction="row" spacing={1}>
-                  {getScoreChip(report.aiConfidenceScore)}
-                  <Chip 
-                    label={report.status} 
-                    color={report.status === 'verified' ? 'success' : report.status === 'rejected' ? 'error' : 'warning'}
-                    size="small"
-                  />
-                </Stack>
-              }
-              title={
-                <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50' }}>
+            <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                {getStatusIcon(report.status)}
+                <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50', ml: 1 }}>
                   {report.hazardType}
                 </Typography>
-              }
-              subheader={
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
-                  <DateIcon fontSize="small" sx={{ color: '#6c757d' }} />
-                  <Typography variant="body2" color="text.secondary">
-                    {new Date(report.createdAt).toLocaleDateString()}
-                  </Typography>
-                </Stack>
-              }
-            />
-            
-            <CardContent sx={{ flexGrow: 1, pt: 0 }}>
-              <Typography variant="body2" sx={{ mb: 2, lineHeight: 1.6 }}>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <DateIcon fontSize="small" sx={{ color: '#6c757d' }} />
+                <Typography variant="body2" color="text.secondary">
+                  {new Date(report.createdAt).toLocaleDateString()}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                {getScoreChip(report.aiConfidenceScore)}
+                <Chip 
+                  label={report.status} 
+                  color={report.status === 'verified' ? 'success' : report.status === 'rejected' ? 'error' : 'warning'}
+                  size="small"
+                />
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Middle section - Content */}
+          <Box sx={{ 
+            flexGrow: 1,
+            p: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            overflow: 'hidden'
+          }}>
+            <Box>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  mb: 1, 
+                  lineHeight: 1.4,
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
                 {report.description}
               </Typography>
               
               {report.location?.address && (
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <LocationIcon fontSize="small" sx={{ color: '#6c757d', mr: 1 }} />
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary"
+                    sx={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
                     {report.location.address}
                   </Typography>
                 </Box>
               )}
-              
-              {report.mediaUrl && (
-                <Box sx={{ mb: 2 }}>
+            </Box>
+            
+            {report.mediaUrl && (
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<OpenIcon />}
+                onClick={() => window.open(report.mediaUrl, '_blank')}
+                sx={{ textTransform: 'none', alignSelf: 'flex-start', mt: 1 }}
+              >
+                View Media
+              </Button>
+            )}
+          </Box>
+            
+          {/* Right section - Actions */}
+          {userRole === 'admin' && report.status === 'pending' && (
+            <Box sx={{ 
+              width: '200px',
+              p: 2,
+              display: 'flex',
+              alignItems: 'center'
+            }}>
+              {updatingId === report._id ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                  <CircularProgress size={24} />
+                </Box>
+              ) : (
+                <Stack direction="column" spacing={1} sx={{ width: '100%' }}>
                   <Button
-                    variant="outlined"
+                    variant="contained"
+                    color="success"
                     size="small"
-                    startIcon={<OpenIcon />}
-                    onClick={() => window.open(report.mediaUrl, '_blank')}
+                    startIcon={<CheckIcon />}
+                    onClick={() => handleUpdateStatus(report._id, 'verified')}
                     sx={{ textTransform: 'none' }}
                   >
-                    View Media
+                    Approve
                   </Button>
-                </Box>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    size="small"
+                    startIcon={<RejectIcon />}
+                    onClick={() => handleUpdateStatus(report._id, 'rejected')}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Reject
+                  </Button>
+                </Stack>
               )}
-            </CardContent>
-            
-            {userRole === 'admin' && report.status === 'pending' && (
-              <CardActions sx={{ p: 2, pt: 0 }}>
-                {updatingId === report._id ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-                    <CircularProgress size={24} />
-                  </Box>
-                ) : (
-                  <Stack direction="row" spacing={1} sx={{ width: '100%' }}>
-                    <Button
-                      variant="contained"
-                      color="success"
-                      size="small"
-                      startIcon={<CheckIcon />}
-                      onClick={() => handleUpdateStatus(report._id, 'verified')}
-                      sx={{ flex: 1, textTransform: 'none' }}
-                    >
-                      Approve
-                    </Button>
-                    <Button
-                      variant="contained"
-                      color="error"
-                      size="small"
-                      startIcon={<RejectIcon />}
-                      onClick={() => handleUpdateStatus(report._id, 'rejected')}
-                      sx={{ flex: 1, textTransform: 'none' }}
-                    >
-                      Reject
-                    </Button>
-                  </Stack>
-                )}
-              </CardActions>
-            )}
-          </Card>
-        </Grid>
+            </Box>
+          )}
+        </Card>
       ))}
-    </Grid>
+    </Stack>
   );
 
   // Report cards for analyst (simplified version)
   const renderAnalystCards = () => (
-    <Grid container spacing={3}>
+    <Stack spacing={2}>
       {filteredReports.map((report) => (
-        <Grid item xs={12} md={6} lg={4} key={report._id}>
-          <Card sx={{ 
-            height: '100%',
+        <Card key={report._id} sx={{ 
+          height: '140px',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'row',
+          bgcolor: getStatusColor(report.status),
+          border: `1px solid ${report.status === 'verified' ? '#4caf50' : '#f44336'}20`,
+          transition: 'transform 0.2s, box-shadow 0.2s',
+          '&:hover': { 
+            transform: 'translateY(-2px)', 
+            boxShadow: '0 6px 20px rgba(0,0,0,0.12)' 
+          }
+        }}>
+          {/* Left section - Status and basic info */}
+          <Box sx={{ 
+            width: '280px',
+            p: 2,
             display: 'flex',
             flexDirection: 'column',
-            bgcolor: getStatusColor(report.status),
-            border: `1px solid ${report.status === 'verified' ? '#4caf50' : '#f44336'}20`,
-            transition: 'transform 0.2s, box-shadow 0.2s',
-            '&:hover': { 
-              transform: 'translateY(-4px)', 
-              boxShadow: '0 8px 25px rgba(0,0,0,0.15)' 
-            }
+            justifyContent: 'space-between'
           }}>
-            <CardHeader
-              avatar={getStatusIcon(report.status)}
-              action={
-                <Chip 
-                  label={report.status} 
-                  color={report.status === 'verified' ? 'success' : 'error'}
-                  size="small"
-                />
-              }
-              title={
-                <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50' }}>
+            <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                {getStatusIcon(report.status)}
+                <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50', ml: 1 }}>
                   {report.hazardType}
                 </Typography>
-              }
-              subheader={
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
-                  <DateIcon fontSize="small" sx={{ color: '#6c757d' }} />
-                  <Typography variant="body2" color="text.secondary">
-                    {new Date(report.createdAt).toLocaleDateString()}
-                  </Typography>
-                </Stack>
-              }
-            />
-            
-            <CardContent sx={{ flexGrow: 1, pt: 0 }}>
-              <Typography variant="body2" sx={{ mb: 2, lineHeight: 1.6 }}>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <DateIcon fontSize="small" sx={{ color: '#6c757d' }} />
+                <Typography variant="body2" color="text.secondary">
+                  {new Date(report.createdAt).toLocaleDateString()}
+                </Typography>
+              </Box>
+              <Chip 
+                label={report.status} 
+                color={report.status === 'verified' ? 'success' : 'error'}
+                size="small"
+              />
+            </Box>
+          </Box>
+
+          {/* Right section - Content */}
+          <Box sx={{ 
+            flexGrow: 1,
+            p: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            overflow: 'hidden'
+          }}>
+            <Box>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  mb: 1, 
+                  lineHeight: 1.4,
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
                 {report.description}
               </Typography>
               
               {report.location?.address && (
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <LocationIcon fontSize="small" sx={{ color: '#6c757d', mr: 1 }} />
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary"
+                    sx={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
                     {report.location.address}
                   </Typography>
                 </Box>
               )}
-              
-              {report.mediaUrl && (
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<OpenIcon />}
-                  onClick={() => window.open(report.mediaUrl, '_blank')}
-                  sx={{ textTransform: 'none' }}
-                >
-                  View Media
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
+            </Box>
+            
+            {report.mediaUrl && (
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<OpenIcon />}
+                onClick={() => window.open(report.mediaUrl, '_blank')}
+                sx={{ textTransform: 'none', alignSelf: 'flex-start', mt: 1 }}
+              >
+                View Media
+              </Button>
+            )}
+          </Box>
+        </Card>
       ))}
-    </Grid>
+    </Stack>
   );
 
   const renderContent = () => {
