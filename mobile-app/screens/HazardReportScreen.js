@@ -20,7 +20,7 @@ import axios from 'axios';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { addToOfflineQueue, getOfflineQueue } from '../services/offlineService';
 
-export default function HazardReportScreen() {
+export default function HazardReportScreen({ navigation }) {
     // Form State
     const [description, setDescription] = useState('');
     const [hazardType, setHazardType] = useState('');
@@ -103,20 +103,7 @@ export default function HazardReportScreen() {
         }
     };
 
-    const handleSignOut = () => {
-        Alert.alert(
-            'Sign Out',
-            'Are you sure you want to sign out?',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                { 
-                    text: 'Sign Out', 
-                    style: 'destructive',
-                    onPress: () => auth.signOut()
-                }
-            ]
-        );
-    };
+
 
 
     // --- HELPER FUNCTION: Contains the logic to submit a single report to the server ---
@@ -268,7 +255,6 @@ export default function HazardReportScreen() {
                         ) : (
                             <Button mode="contained" onPress={handleSubmit} style={styles.submitButton}>Submit Report</Button>
                         )}
-                        <Button icon="logout" mode="outlined" onPress={handleSignOut} style={styles.signOutButton}>Sign Out</Button>
                     </Card.Content>
                 </Card>
             </ScrollView>
@@ -286,7 +272,6 @@ const styles = StyleSheet.create({
     buttonRow: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 8 },
     button: { flex: 1, marginHorizontal: 4 },
     submitButton: { marginTop: 16, paddingVertical: 4, backgroundColor: 'navy' },
-    signOutButton: { marginTop: 10, borderColor: 'navy' },
     imagePreview: { width: '100%', height: 200, borderRadius: 8, marginBottom: 16, alignSelf: 'center', borderWidth: 1, borderColor: '#ddd' },
     spinner: { marginTop: 16 },
     pickerContainer: { borderColor: 'gray', borderWidth: 1, borderRadius: 4, marginBottom: 16 },

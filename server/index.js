@@ -28,6 +28,7 @@ mongoose.connect(process.env.MONGO_URI, {
 // --- API Routes (These come AFTER the middleware) ---
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/social', require('./routes/social'));
+app.use('/api/schemes', require('./routes/schemes'));
 
 // Test route to confirm the server is running
 app.get('/', (req, res) => {

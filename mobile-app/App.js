@@ -3,11 +3,15 @@ import React, { useState, useEffect } from 'react';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { auth } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import LoginScreen from './screens/LoginScreen';
 import SignUpScreen from './screens/SignUpScreen';
+import HomeScreen from './screens/HomeScreen';
 import HazardReportScreen from './screens/HazardReportScreen';
+import SchemesScreen from './screens/SchemesScreen';
+import ProfileScreen from './screens/ProfileScreen';
 
 // --- OFFLINE TOOLS IMPORTS ---
 import { useNetInfo } from '@react-native-community/netinfo';
@@ -15,6 +19,71 @@ import { getOfflineQueue, clearOfflineQueue } from './services/offlineService';
 import axios from 'axios';
 
 const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
+
+// Bottom Tab Navigator Component
+function BottomTabNavigator() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+          if (route.name === 'HomeTab') {
+            iconName = 'home';
+          } else if (route.name === 'ReportTab') {
+            iconName = 'alert-circle';
+          } else if (route.name === 'SchemesTab') {
+            iconName = 'shield-check';
+          } else if (route.name === 'ProfileTab') {
+            iconName = 'account-circle';
+          }
+          
+          // Import MaterialCommunityIcons for the icons
+          const MaterialCommunityIcons = require('@expo/vector-icons/MaterialCommunityIcons').default;
+          return <MaterialCommunityIcons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: '#1976d2',
+        tabBarInactiveTintColor: 'gray',
+        tabBarStyle: {
+          backgroundColor: 'white',
+          elevation: 8,
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '600',
+        },
+      })}
+    >
+      <Tab.Screen 
+        name="HomeTab" 
+        component={HomeScreen} 
+        options={{ tabBarLabel: 'Home' }}
+      />
+      <Tab.Screen 
+        name="ReportTab" 
+        component={HazardReportScreen} 
+        options={{ tabBarLabel: 'Report' }}
+      />
+      <Tab.Screen 
+        name="SchemesTab" 
+        component={SchemesScreen} 
+        options={{ tabBarLabel: 'Schemes' }}
+      />
+      <Tab.Screen 
+        name="ProfileTab" 
+        component={ProfileScreen} 
+        options={{ tabBarLabel: 'Profile' }}
+      />
+    </Tab.Navigator>
+  );
+}
 
 // --- Reusable Submission Logic ---
 const submitReportToServer = async (report) => {
@@ -88,9 +157,9 @@ export default function App() {
   return (
     <PaperProvider>
       <NavigationContainer>
-        <Stack.Navigator>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
           {user ? (
-            <Stack.Screen name="HazardReport" component={HazardReportScreen} />
+            <Stack.Screen name="MainApp" component={BottomTabNavigator} />
           ) : (
             <>
               <Stack.Screen name="Login" component={LoginScreen} />
