@@ -2,19 +2,17 @@
 
 ## Project Overview
 
-The INCOIS Ocean Hazard Reporting Platform is a specialized solution developed for SIH 2025 (Problem Statement: SIH25039) to facilitate the monitoring and reporting of ocean-related hazards. The platform provides a streamlined interface for field reporting and a robust administrative backend for verification and data analysis.
+The INCOIS Ocean Hazard Reporting Platform is a specialized solution developed for Smart India Hackathon 2025 (Problem Statement: SIH25039) to facilitate the monitoring and reporting of ocean-related hazards. The platform provides a streamlined interface for field reporting and a robust administrative backend for verification and data analysis.
 
 ## Core Pipeline and Verification
 
-This project implements a hazard reporting and verification pipeline. Users submit incident reports through the mobile application, providing a hazard type, textual description, GPS coordinates, and an image uploaded via Cloudinary. The report is persisted in MongoDB with an initial status of `pending` and an `aiConfidenceScore` of zero, and the client receives an immediate acknowledgement.
+This project implements a hazard reporting and verification pipeline. Users submit incident reports through the mobile application, providing a hazard type, textual description and an image uploaded via Cloudinary. The report is persisted in MongoDB with an initial status of `pending` and an `aiConfidenceScore` of zero, and the client receives an immediate acknowledgement.
 
 An asynchronous AI verification pipeline (`server/services/aiVerification.js`) then processes each report in two stages:
 
-1. **Coastal Location Check**: The submitted GPS coordinates are validated against India's defined coastal bounding box. A report originating from a qualifying coastal region receives 30 confidence points; reports that fail this check are not processed further.
+- **CLIP-Based Image-to-Text Verification**: The backend calls Hugging Face's inference API using the `openai/clip-vit-large-patch14` model in zero-shot image classification mode. The submitted image is evaluated against a set of ocean-hazard candidate labels (e.g., `ocean`, `waves`, `surge`, `flood`). If the top-scoring label exceeds a similarity threshold of 0.70, up to 70 additional confidence points are awarded proportionally to the model's score.
 
-2. **CLIP-Based Image-to-Text Verification**: The backend calls Hugging Face's inference API using the `openai/clip-vit-large-patch14` model in zero-shot image classification mode. The submitted image is evaluated against a set of ocean-hazard candidate labels (e.g., `ocean`, `waves`, `surge`, `flood`). If the top-scoring label exceeds a similarity threshold of 0.70, up to 70 additional confidence points are awarded proportionally to the model's score.
-
-The two checks yield a composite `aiConfidenceScore` out of 100. Reports scoring 85 or above are automatically promoted to `verified` status. Reports below this threshold remain `pending` for manual review by an administrator or analyst, who can update the status via the `PATCH /api/reports/:id/status` endpoint. This multi-stage scoring approach—combining geospatial validation with semantic image-text matching—reduces false positives and ensures only credible ocean hazard reports advance through the system.
+These checks yield a composite `aiConfidenceScore` out of 100. Reports scoring 85 or above are automatically promoted to `verified` status. Reports below this threshold remain `pending` for manual review by an administrator or analyst, who can update the status via the `PATCH /api/reports/:id/status` endpoint. This multi-stage scoring approach—combining semantic image-text matching, reduces false positives and ensures only credible ocean hazard reports advance through the system.
 
 ## Key Features
 
