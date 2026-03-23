@@ -6,9 +6,15 @@ The INCOIS Ocean Hazard Reporting Platform is a specialized solution developed f
 
 ## Core Pipeline and Verification
 
-This project implements a hazard reporting and verification pipeline where users submit incident reports consisting of images and detailed descriptions. This workflow mirrors the reporting mechanisms employed in DREAMS (Disaster Risk and Early Action Management System), a broader initiative for hazard monitoring and response.
+This project implements a hazard reporting and verification pipeline. Users submit incident reports through the mobile application, providing a hazard type, textual description, GPS coordinates, and an image uploaded via Cloudinary. The report is persisted in MongoDB with an initial status of `pending` and an `aiConfidenceScore` of zero, and the client receives an immediate acknowledgement.
 
-A critical component of this pipeline is automated report validation. The backend integrates a CLIP-based image-to-text verification module (openai/clip-vit-large-patch14 via Hugging Face) that cross-references submitted hazard images against their textual descriptions, confirming authenticity and relevance before the report reaches an analyst.
+An asynchronous AI verification pipeline (`server/services/aiVerification.js`) then processes each report in two stages:
+
+1. **Coastal Location Check**: The submitted GPS coordinates are validated against India's defined coastal bounding box. A report originating from a qualifying coastal region receives 30 confidence points; reports that fail this check are not processed further.
+
+2. **CLIP-Based Image-to-Text Verification**: The backend calls Hugging Face's inference API using the `openai/clip-vit-large-patch14` model in zero-shot image classification mode. The submitted image is evaluated against a set of ocean-hazard candidate labels (e.g., `ocean`, `waves`, `surge`, `flood`). If the top-scoring label exceeds a similarity threshold of 0.70, up to 70 additional confidence points are awarded proportionally to the model's score.
+
+The two checks yield a composite `aiConfidenceScore` out of 100. Reports scoring 85 or above are automatically promoted to `verified` status. Reports below this threshold remain `pending` for manual review by an administrator or analyst, who can update the status via the `PATCH /api/reports/:id/status` endpoint. This multi-stage scoring approach—combining geospatial validation with semantic image-text matching—reduces false positives and ensures only credible ocean hazard reports advance through the system.
 
 ## Key Features
 
